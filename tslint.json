@@ -1,0 +1,65 @@
+{
+  "extends": [
+    "tslint:latest",
+    "tslint-react",
+    "tslint-config-prettier"
+  ],
+  "rules": {
+    "semicolon": [
+      true,
+      "ignore-bound-class-methods"
+    ],
+    "indent": [
+      true,
+      "spaces"
+    ],
+    "interface-name": [
+      false
+    ],
+    "no-submodule-imports": [
+      false,
+      "react-dom/server",
+      "@material-ui/core",
+      "moment"
+    ],
+    "no-implicit-dependencies": [
+      false,
+      "dev"
+    ],
+    "quotemark": [
+      true,
+      "single",
+      "jsx-double"
+    ],
+    "no-string-literal": false,
+    "no-var-requires": false,
+    "ordered-imports": false,
+    "member-ordering": [
+      false
+    ],
+    "no-empty-interface": false,
+    "member-access": false,
+    "object-literal-sort-keys": false,
+    "no-shadowed-variable": false,
+    "jsx-no-multiline-js": false,
+    "no-console": [
+      false
+    ],
+    "jsx-alignment": [
+      false
+    ],
+    "no-unused-expression": [
+      true,
+      "allow-tagged-template"
+    ],
+    "jsx-boolean-value": [
+      "never"
+    ],
+    "jsx-no-lambda": false,
+    "interface-over-type-literal": false,
+    "prefer-const": false,
+    "no-bitwise": false,
+    "prefer-conditional-expression": false,
+    "max-classes-per-file": false
+  }
+}
