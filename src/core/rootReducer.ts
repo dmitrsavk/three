@@ -3,7 +3,9 @@ import { combineReducers, Reducer } from 'redux';
 import { reducer as formReducer } from 'redux-form';
 import { AnyAction } from 'typescript-fsa';
 
-const rootObjReducer = {};
+const rootObjReducer = {
+  root: () => ({}),
+};
 
 type RootType = typeof rootObjReducer;
 type UnboxReducer<T> = T extends Reducer<infer U> ? U : T;

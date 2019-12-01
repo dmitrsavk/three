@@ -12,22 +12,11 @@ const container = document.getElementById('root');
 
 const Layout = styled.div`
   display: flex;
+  width: 100vw;
+  height: 100vh;
   flex-direction: column;
   justify-content: space-between;
   min-height: 100vh;
-`;
-
-const ContentWrap = styled.div`
-  display: flex;
-  flex-grow: 1;
-`;
-
-const ComponentWrap = styled.div`
-  flex-grow: 1;
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 10px 100px 13px;
 `;
 
 const renderApp = (Component: any) => {
@@ -35,11 +24,7 @@ const renderApp = (Component: any) => {
     <Provider store={store}>
       <ConnectedRouter history={history}>
         <Layout>
-          <ContentWrap>
-            <ComponentWrap>
-              <Component />
-            </ComponentWrap>
-          </ContentWrap>
+          <Component />
         </Layout>
       </ConnectedRouter>
     </Provider>,

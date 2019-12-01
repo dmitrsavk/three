@@ -6,6 +6,6 @@ export type StoreProps = {};
 
 export type OwnProps = {};
 
-export type AuthPageProps = StoreDispatchProps & StoreProps & OwnProps;
+export type PageProps = StoreDispatchProps & StoreProps & OwnProps;
 
 export type AuthPageState = {};
