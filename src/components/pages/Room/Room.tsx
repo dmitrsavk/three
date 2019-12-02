@@ -4,26 +4,33 @@ import * as THREE from 'three';
 
 import { connect } from 'core';
 import { PageProps, StoreDispatchProps, StoreProps, AuthPageState } from './types';
-import { Scene, PerspectiveCamera, WebGLRenderer, BoxGeometry, Mesh, Vector3, Object3D } from 'three';
+import { Scene, PerspectiveCamera, WebGLRenderer, BoxGeometry, Mesh, Vector3, Object3D, Euler } from 'three';
+
+const STEP_SIZE = 0.2;
+
+const ROOM_WIDTH = 5;
+const ROOM_HEIGHT = 10;
+const ROOM_TAIL = 2.5;
 
 class Room extends Component<PageProps, AuthPageState> {
   scene: Scene;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
-  cube: Mesh;
   canvas: HTMLCanvasElement;
-  lathe: Mesh;
   objects: Object3D[] = [];
   cameraPosition: {
     x: number;
     y: number;
     z: number;
   } = {
-    x: 0,
-    y: 2,
-    z: 5,
+    x: ROOM_WIDTH / 2,
+    y: 1.8,
+    z: ROOM_HEIGHT - STEP_SIZE,
   };
-  time: number = Date.now();
+  mousePressed: boolean = false;
+  scale: number = 1;
+  angleX: number = 0;
+  angleY: number = 0;
 
   constructor(props: PageProps) {
     super(props);
@@ -36,102 +43,192 @@ class Room extends Component<PageProps, AuthPageState> {
 
     this.init3D();
 
+    //@ts-ignore
+    this.canvas.addEventListener('mousedown', this.onMouseDown);
+    //@ts-ignore
+    this.canvas.addEventListener('mouseup', this.onMouseUp);
+    //@ts-ignore
+    this.canvas.addEventListener('mousemove', this.onMouseMove);
+
     //this.addHelpers();
+    this.addWalls();
+    this.addCube();
 
     this.addLight();
-    this.addSun();
 
     this.renderScene();
   }
+
+  onMouseDown = (event: React.MouseEvent) => {
+    this.mousePressed = true;
+  };
+
+  onMouseUp = (event: React.MouseEvent) => {
+    this.mousePressed = false;
+  };
+
+  onMouseMove = (event: React.MouseEvent) => {
+    if (this.mousePressed) {
+      this.angleY += event.movementX / this.canvas.clientWidth;
+      this.angleX += event.movementY / this.canvas.clientHeight;
+
+      this.camera.rotation.x = this.angleX / this.scale;
+      this.camera.rotation.y = this.angleY / this.scale;
+    }
+  };
 
   init3D() {
     this.canvas = document.getElementById('room-page-canvas') as HTMLCanvasElement;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(75, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(45, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 1000);
 
     this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
-    this.camera.lookAt(0, 0, 0);
+
+    this.camera.rotation.order = 'YXZ';
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
   }
 
   addHelpers() {
-    const axes = new THREE.GridHelper(100, 100);
+    const grid = new THREE.GridHelper(100, 100);
+    const axes = new THREE.AxesHelper(6);
 
-    //@ts-ignore
     axes.renderOrder = 1;
+    //@ts-ignore
+    axes.material.depthTest = false;
 
+    grid.renderOrder = 1;
+
+    this.scene.add(grid);
     this.scene.add(axes);
   }
 
   addLight() {
-    const directionLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionLight.position.set(1, -1, 1);
+    const directionLight = new THREE.DirectionalLight(0xffffff, 0.1);
     this.scene.add(directionLight);
 
     const pointLight = new THREE.PointLight(0xffffff, 1);
-    pointLight.position.set(0, 0, 0);
+    pointLight.position.set(ROOM_WIDTH / 2, 3, ROOM_HEIGHT / 2);
+    pointLight.distance = 8;
     this.scene.add(pointLight);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     this.scene.add(ambientLight);
+
+    // var sphereSize = 1;
+    // var pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
+    // this.scene.add(pointLightHelper);
   }
 
-  addSun() {
-    const sunCS = new THREE.Object3D();
-    this.scene.add(sunCS);
+  addWalls() {
+    const loader = new THREE.TextureLoader();
+    const tex = loader.load('https://static.ihaveblog.ru/texture.jpg');
+    const oboitex = loader.load('https://static.ihaveblog.ru/oboi.jpg');
 
-    const sunGeometry = new THREE.SphereBufferGeometry(1, 100, 100);
-    const sunMaterial = new THREE.MeshPhongMaterial({ color: 0xffff00 });
-    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+    const oboitex2 = loader.load('https://static.ihaveblog.ru/oboi.jpg');
 
-    sun.position.set(0, 0, 0);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(8, 8);
 
-    sunCS.add(sun);
+    oboitex.wrapS = THREE.RepeatWrapping;
+    oboitex.wrapT = THREE.RepeatWrapping;
+    oboitex.repeat.set(10, 5);
 
-    const earthCS = new THREE.Object3D();
-    earthCS.position.set(-2, 0, 0);
-    sunCS.add(earthCS);
+    oboitex2.wrapS = THREE.RepeatWrapping;
+    oboitex2.wrapT = THREE.RepeatWrapping;
+    oboitex2.repeat.set(15, 5);
 
-    const earthGeometry = new THREE.SphereBufferGeometry(0.2, 100, 100);
-    const earthMaterial = new THREE.MeshPhongMaterial({ color: 0x3c00e0 });
-    const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+    const polGeometry = new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
+    const polMaterial = new THREE.MeshPhongMaterial({ map: tex });
 
-    earthCS.add(earth);
+    const pol = new THREE.Mesh(polGeometry, polMaterial);
+    pol.position.set(ROOM_WIDTH / 2, 0, ROOM_HEIGHT / 2);
+    pol.rotateX(-Math.PI / 2);
 
-    const moonCs = new THREE.Object3D();
-    moonCs.position.set(-0.5, 0, 0);
+    const walls = [
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
+        new THREE.MeshPhongMaterial({ map: oboitex })
+      ),
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
+        new THREE.MeshPhongMaterial({ map: oboitex2 })
+      ),
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
+        new THREE.MeshPhongMaterial({ map: oboitex2 })
+      ),
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
+        new THREE.MeshPhongMaterial({ map: oboitex })
+      ),
+    ];
 
-    const moonGeometry = new THREE.SphereBufferGeometry(0.05, 100, 100);
-    const moonMaterial = new THREE.MeshPhongMaterial({ color: 0x7f7f7f });
-    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+    walls[0].position.set(ROOM_WIDTH / 2, ROOM_TAIL / 2, 0);
 
-    earthCS.add(moonCs);
-    moonCs.add(moon);
+    walls[1].rotateY(-Math.PI / 2);
+    walls[1].position.set(ROOM_WIDTH, ROOM_TAIL / 2, ROOM_HEIGHT / 2);
 
-    this.objects.push(moon);
-    this.objects.push(moonCs);
-    this.objects.push(sun);
-    this.objects.push(sunCS);
-    this.objects.push(earthCS);
-    this.objects.push(earth);
+    walls[2].rotateY(Math.PI / 2);
+    walls[2].position.set(0, ROOM_TAIL / 2, ROOM_HEIGHT / 2);
+
+    walls[3].position.set(ROOM_WIDTH / 2, ROOM_TAIL / 2, ROOM_HEIGHT);
+    walls[3].rotateY(Math.PI);
+
+    this.scene.add(pol);
+
+    walls.forEach((wall) => {
+      this.scene.add(wall);
+    });
+  }
+
+  addCube() {
+    const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+
+    cube.position.set(1, 0.5, ROOM_HEIGHT / 2);
+
+    this.scene.add(cube);
   }
 
   onKeyPress = (event: any) => {
-    if (event.keyCode == 39) {
-      this.cameraPosition.x += 0.2;
-      this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
-    } else if (event.keyCode == 37) {
-      this.cameraPosition.x -= 0.2;
-      this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
-    } else if (event.keyCode == 38) {
-      this.cameraPosition.z -= 0.2;
-      this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
-    } else if (event.keyCode == 40) {
-      this.cameraPosition.z += 0.2;
-      this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
+    const dx = STEP_SIZE * Math.cos(this.angleY);
+    const dz = STEP_SIZE * Math.sin(this.angleY);
+
+    let newX = this.cameraPosition.x;
+    let newZ = this.cameraPosition.z;
+
+    switch (event.keyCode) {
+      case 68:
+        newX = this.cameraPosition.x + dx;
+        newZ = this.cameraPosition.z - dz;
+        break;
+      case 65:
+        newX = this.cameraPosition.x - dx;
+        newZ = this.cameraPosition.z + dz;
+        break;
+      case 87:
+        newX = this.cameraPosition.x - dz;
+        newZ = this.cameraPosition.z - dx;
+        break;
+      case 83:
+        newX = this.cameraPosition.x + dz;
+        newZ = this.cameraPosition.z + dx;
+        break;
     }
+
+    if (newX > STEP_SIZE && newX < ROOM_WIDTH - STEP_SIZE) {
+      this.cameraPosition.x = newX;
+    }
+
+    if (newZ > STEP_SIZE && newZ < ROOM_HEIGHT - STEP_SIZE) {
+      this.cameraPosition.z = newZ;
+    }
+
+    this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
   };
 
   needResize() {
@@ -151,13 +248,6 @@ class Room extends Component<PageProps, AuthPageState> {
       this.camera.aspect = this.canvas.clientWidth / this.canvas.clientHeight;
       this.camera.updateProjectionMatrix();
     }
-
-    const newTime = Date.now();
-    const angle = (Math.PI / 4) * ((newTime - this.time) / 1000);
-
-    this.objects.forEach((mesh) => {
-      mesh.rotation.y = angle;
-    });
 
     this.renderer.render(this.scene, this.camera);
 
