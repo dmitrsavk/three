@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 import { connect } from 'core';
 import { PageProps, StoreDispatchProps, StoreProps, AuthPageState } from './types';
-import { Scene, PerspectiveCamera, WebGLRenderer, BoxGeometry, Mesh, Vector3, Object3D, Euler } from 'three';
+import { Scene, PerspectiveCamera, WebGLRenderer, Object3D } from 'three';
 
 const STEP_SIZE = 0.2;
 
@@ -108,12 +108,18 @@ class Room extends Component<PageProps, AuthPageState> {
     const directionLight = new THREE.DirectionalLight(0xffffff, 0.1);
     this.scene.add(directionLight);
 
+    const adirectionLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    adirectionLight.position.set(ROOM_WIDTH / 2, 0, ROOM_HEIGHT / 2);
+    adirectionLight.target.position.set(ROOM_WIDTH / 2, ROOM_TAIL, ROOM_HEIGHT / 2);
+    this.scene.add(adirectionLight);
+    this.scene.add(adirectionLight.target);
+
     const pointLight = new THREE.PointLight(0xffffff, 1);
-    pointLight.position.set(ROOM_WIDTH / 2, 3, ROOM_HEIGHT / 2);
+    pointLight.position.set(ROOM_WIDTH / 2, ROOM_TAIL - 0.5, ROOM_HEIGHT / 2);
     pointLight.distance = 8;
     this.scene.add(pointLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
     this.scene.add(ambientLight);
 
     // var sphereSize = 1;
@@ -140,7 +146,7 @@ class Room extends Component<PageProps, AuthPageState> {
     oboitex2.wrapT = THREE.RepeatWrapping;
     oboitex2.repeat.set(15, 5);
 
-    const polGeometry = new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
+    const polGeometry = new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
     const polMaterial = new THREE.MeshPhongMaterial({ map: tex });
 
     const pol = new THREE.Mesh(polGeometry, polMaterial);
@@ -149,19 +155,19 @@ class Room extends Component<PageProps, AuthPageState> {
 
     const walls = [
       new THREE.Mesh(
-        new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
+        new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
         new THREE.MeshPhongMaterial({ map: oboitex })
       ),
       new THREE.Mesh(
-        new THREE.PlaneGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
+        new THREE.PlaneBufferGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
         new THREE.MeshPhongMaterial({ map: oboitex2 })
       ),
       new THREE.Mesh(
-        new THREE.PlaneGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
+        new THREE.PlaneBufferGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
         new THREE.MeshPhongMaterial({ map: oboitex2 })
       ),
       new THREE.Mesh(
-        new THREE.PlaneGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
+        new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
         new THREE.MeshPhongMaterial({ map: oboitex })
       ),
     ];
@@ -177,11 +183,20 @@ class Room extends Component<PageProps, AuthPageState> {
     walls[3].position.set(ROOM_WIDTH / 2, ROOM_TAIL / 2, ROOM_HEIGHT);
     walls[3].rotateY(Math.PI);
 
+    const potolokGeometry = new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
+    const potolokMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 1 });
+
+    const potolok = new THREE.Mesh(potolokGeometry, potolokMaterial);
+    potolok.position.set(ROOM_WIDTH / 2, ROOM_TAIL, ROOM_HEIGHT / 2);
+    potolok.rotateX(Math.PI / 2);
+
     this.scene.add(pol);
 
     walls.forEach((wall) => {
       this.scene.add(wall);
     });
+
+    this.scene.add(potolok);
   }
 
   addCube() {
