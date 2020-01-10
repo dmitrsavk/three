@@ -271,10 +271,38 @@ class Room extends Component<PageProps, AuthPageState> {
     gltfLoader.load(MODEL_URL, (gltf) => {
       const root = gltf.scene;
 
+      this.logObj(gltf.scene);
+      this.filterObj(gltf.scene);
+
       this.scene.add(root);
 
       this.renderScene();
     });
+  }
+
+  logObj(scene: THREE.Object3D) {
+    console.log(scene.name);
+
+    if (scene.children && scene.children.length) {
+      scene.children.forEach((child) => {
+        this.logObj(child);
+      });
+    }
+  }
+
+  filterObj(scene: THREE.Object3D) {
+    //couch_0
+    //couch_00_Material_#9477_0
+
+    if (scene.children && scene.children.length) {
+      scene.children.forEach((child, index) => {
+        if (child.name === 'couch_0' || child.name === 'couch_00_Material_#9477_0') {
+          scene.children[index] = new THREE.Object3D();
+        } else {
+          this.filterObj(child);
+        }
+      });
+    }
   }
 
   renderScene() {
