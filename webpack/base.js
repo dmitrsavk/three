@@ -40,6 +40,18 @@ module.exports = (env) => {
           ],
         },
         {
+          test: /\.(mtl|obj)$/,
+          use: [
+            {
+              loader: 'file-loader',
+              options: {
+                outputPath: 'static/models',
+                name: '[name].[ext]',
+              },
+            },
+          ],
+        },
+        {
           test: /\.css$/,
           use: ['style-loader', 'css-loader'],
         },
@@ -74,7 +86,7 @@ module.exports = (env) => {
           minifyURLs: true,
         },
       }),
-      new CopyPlugin([{ from: 'src/assets/static', to: '[name].[ext]', toType: 'template' }]),
+      new CopyPlugin([{ from: 'src/assets', to: 'static/', toType: 'dir' }]),
     ],
   };
 };

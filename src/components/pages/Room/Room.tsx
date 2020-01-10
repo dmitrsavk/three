@@ -4,13 +4,18 @@ import * as THREE from 'three';
 
 import { connect } from 'core';
 import { PageProps, StoreDispatchProps, StoreProps, AuthPageState } from './types';
-import { Scene, PerspectiveCamera, WebGLRenderer, Object3D } from 'three';
+import { Scene, PerspectiveCamera, WebGLRenderer, Object3D, Mesh } from 'three';
+import { OBJLoader2 } from 'three/examples/jsm/loaders/OBJLoader2';
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
+import { MtlObjBridge } from 'three/examples/jsm/loaders/obj2/bridge/MtlObjBridge';
+
+const SCALE = 1;
 
 const STEP_SIZE = 0.2;
 
-const ROOM_WIDTH = 5;
-const ROOM_HEIGHT = 10;
-const ROOM_TAIL = 2.5;
+const ROOM_WIDTH = 3.5;
+const ROOM_HEIGHT = 5.25;
+const ROOM_TAIL = 2.3;
 
 class Room extends Component<PageProps, AuthPageState> {
   scene: Scene;
@@ -24,13 +29,14 @@ class Room extends Component<PageProps, AuthPageState> {
     z: number;
   } = {
     x: ROOM_WIDTH / 2,
-    y: 1.8,
+    y: 1.5,
     z: ROOM_HEIGHT - STEP_SIZE,
   };
   mousePressed: boolean = false;
   scale: number = 1;
   angleX: number = 0;
   angleY: number = 0;
+  room: Object3D;
 
   constructor(props: PageProps) {
     super(props);
@@ -51,10 +57,16 @@ class Room extends Component<PageProps, AuthPageState> {
     this.canvas.addEventListener('mousemove', this.onMouseMove);
 
     //this.addHelpers();
+    this.room = new THREE.Object3D();
+    //this.room.scale.set(SCALE, SCALE, SCALE);
+
+    this.scene.add(this.room);
+
     this.addWalls();
-    this.addCube();
 
     this.addLight();
+
+    this.addSofa();
 
     this.renderScene();
   }
@@ -84,6 +96,7 @@ class Room extends Component<PageProps, AuthPageState> {
     this.camera = new THREE.PerspectiveCamera(45, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 1000);
 
     this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
+    this.camera.lookAt(ROOM_WIDTH / 2, ROOM_TAIL / 3, 0)
 
     this.camera.rotation.order = 'YXZ';
 
@@ -111,20 +124,16 @@ class Room extends Component<PageProps, AuthPageState> {
     const adirectionLight = new THREE.DirectionalLight(0xffffff, 0.4);
     adirectionLight.position.set(ROOM_WIDTH / 2, 0, ROOM_HEIGHT / 2);
     adirectionLight.target.position.set(ROOM_WIDTH / 2, ROOM_TAIL, ROOM_HEIGHT / 2);
-    this.scene.add(adirectionLight);
-    this.scene.add(adirectionLight.target);
+    this.room.add(adirectionLight);
+    this.room.add(adirectionLight.target);
 
     const pointLight = new THREE.PointLight(0xffffff, 1);
     pointLight.position.set(ROOM_WIDTH / 2, ROOM_TAIL - 0.5, ROOM_HEIGHT / 2);
     pointLight.distance = 8;
-    this.scene.add(pointLight);
+    this.room.add(pointLight);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
-    this.scene.add(ambientLight);
-
-    // var sphereSize = 1;
-    // var pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
-    // this.scene.add(pointLightHelper);
+    this.room.add(ambientLight);
   }
 
   addWalls() {
@@ -140,11 +149,11 @@ class Room extends Component<PageProps, AuthPageState> {
 
     oboitex.wrapS = THREE.RepeatWrapping;
     oboitex.wrapT = THREE.RepeatWrapping;
-    oboitex.repeat.set(10, 5);
+    oboitex.repeat.set(10, 7);
 
     oboitex2.wrapS = THREE.RepeatWrapping;
     oboitex2.wrapT = THREE.RepeatWrapping;
-    oboitex2.repeat.set(15, 5);
+    oboitex2.repeat.set(15, 7);
 
     const polGeometry = new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
     const polMaterial = new THREE.MeshPhongMaterial({ map: tex });
@@ -190,23 +199,13 @@ class Room extends Component<PageProps, AuthPageState> {
     potolok.position.set(ROOM_WIDTH / 2, ROOM_TAIL, ROOM_HEIGHT / 2);
     potolok.rotateX(Math.PI / 2);
 
-    this.scene.add(pol);
+    this.room.add(pol);
 
     walls.forEach((wall) => {
-      this.scene.add(wall);
+      this.room.add(wall);
     });
 
-    this.scene.add(potolok);
-  }
-
-  addCube() {
-    const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-
-    cube.position.set(1, 0.5, ROOM_HEIGHT / 2);
-
-    this.scene.add(cube);
+    this.room.add(potolok);
   }
 
   onKeyPress = (event: any) => {
@@ -267,6 +266,25 @@ class Room extends Component<PageProps, AuthPageState> {
     this.renderer.render(this.scene, this.camera);
 
     requestAnimationFrame(this.renderScene);
+  }
+
+  addSofa() {
+    const mtlLoader = new MTLLoader();
+    const objLoader = new OBJLoader2();
+
+    mtlLoader.load('/static/models/sofa.mtl', (mtlParseResult) => {
+      const materials = MtlObjBridge.addMaterialsFromMtlLoader(mtlParseResult);
+
+      objLoader.addMaterials(materials, false);
+
+      objLoader.load('/static/models/sofa.obj', (root: Mesh) => {
+        root.position.set(ROOM_WIDTH / 2 + 1.1, 0, ROOM_HEIGHT / 2 - 1.3);
+        root.scale.set(0.0010, 0.0012, 0.0010);
+        root.rotateY(-Math.PI / 2);
+
+        this.room.add(root);
+      });
+    });
   }
 
   render() {

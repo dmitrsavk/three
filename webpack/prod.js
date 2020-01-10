@@ -18,7 +18,7 @@ module.exports = (env) => {
       pathinfo: false,
     },
     plugins: [
-      new UglifyJsPlugin(),
+      //new UglifyJsPlugin(),
       new webpack.NamedModulesPlugin(),
       new webpack.DefinePlugin({
         __DEV__: false,
