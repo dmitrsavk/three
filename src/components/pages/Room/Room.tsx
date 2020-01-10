@@ -30,10 +30,13 @@ class Room extends Component<PageProps, AuthPageState> {
     y: 1.8,
     z: ROOM_HEIGHT - STEP_SIZE,
   };
-  mousePressed: boolean = false;
   scale: number = 1;
   angleX: number = 0;
   angleY: number = 0;
+
+  state = {
+    loading: true,
+  };
 
   constructor(props: PageProps) {
     super(props);
@@ -47,37 +50,17 @@ class Room extends Component<PageProps, AuthPageState> {
     this.init3D();
 
     //@ts-ignore
-    this.canvas.addEventListener('mousedown', this.onMouseDown);
-    //@ts-ignore
-    this.canvas.addEventListener('mouseup', this.onMouseUp);
-    //@ts-ignore
     this.canvas.addEventListener('mousemove', this.onMouseMove);
-
-    //this.addHelpers();
-    // this.addWalls();
-    // this.addCube();
-
-    //this.addLight();
 
     this.loadModel();
   }
 
-  onMouseDown = (event: React.MouseEvent) => {
-    this.mousePressed = true;
-  };
-
-  onMouseUp = (event: React.MouseEvent) => {
-    this.mousePressed = false;
-  };
-
   onMouseMove = (event: React.MouseEvent) => {
-    if (this.mousePressed) {
-      this.angleY += event.movementX / this.canvas.clientWidth;
-      this.angleX += event.movementY / this.canvas.clientHeight;
+    this.angleY += event.movementX / this.canvas.clientWidth;
+    this.angleX += event.movementY / this.canvas.clientHeight;
 
-      this.camera.rotation.x = this.angleX / this.scale;
-      this.camera.rotation.y = this.angleY / this.scale;
-    }
+    this.camera.rotation.x = this.angleX / this.scale;
+    this.camera.rotation.y = this.angleY / this.scale;
   };
 
   init3D() {
@@ -124,92 +107,6 @@ class Room extends Component<PageProps, AuthPageState> {
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
     this.scene.add(ambientLight);
-
-    // var sphereSize = 1;
-    // var pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
-    // this.scene.add(pointLightHelper);
-  }
-
-  addWalls() {
-    const loader = new THREE.TextureLoader();
-    const tex = loader.load('https://static.ihaveblog.ru/texture.jpg');
-    const oboitex = loader.load('https://static.ihaveblog.ru/oboi.jpg');
-
-    const oboitex2 = loader.load('https://static.ihaveblog.ru/oboi.jpg');
-
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(8, 8);
-
-    oboitex.wrapS = THREE.RepeatWrapping;
-    oboitex.wrapT = THREE.RepeatWrapping;
-    oboitex.repeat.set(10, 5);
-
-    oboitex2.wrapS = THREE.RepeatWrapping;
-    oboitex2.wrapT = THREE.RepeatWrapping;
-    oboitex2.repeat.set(15, 5);
-
-    const polGeometry = new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
-    const polMaterial = new THREE.MeshPhongMaterial({ map: tex });
-
-    const pol = new THREE.Mesh(polGeometry, polMaterial);
-    pol.position.set(ROOM_WIDTH / 2, 0, ROOM_HEIGHT / 2);
-    pol.rotateX(-Math.PI / 2);
-
-    const walls = [
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex })
-      ),
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex2 })
-      ),
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex2 })
-      ),
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex })
-      ),
-    ];
-
-    walls[0].position.set(ROOM_WIDTH / 2, ROOM_TAIL / 2, 0);
-
-    walls[1].rotateY(-Math.PI / 2);
-    walls[1].position.set(ROOM_WIDTH, ROOM_TAIL / 2, ROOM_HEIGHT / 2);
-
-    walls[2].rotateY(Math.PI / 2);
-    walls[2].position.set(0, ROOM_TAIL / 2, ROOM_HEIGHT / 2);
-
-    walls[3].position.set(ROOM_WIDTH / 2, ROOM_TAIL / 2, ROOM_HEIGHT);
-    walls[3].rotateY(Math.PI);
-
-    const potolokGeometry = new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
-    const potolokMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 1 });
-
-    const potolok = new THREE.Mesh(potolokGeometry, potolokMaterial);
-    potolok.position.set(ROOM_WIDTH / 2, ROOM_TAIL, ROOM_HEIGHT / 2);
-    potolok.rotateX(Math.PI / 2);
-
-    this.scene.add(pol);
-
-    walls.forEach((wall) => {
-      this.scene.add(wall);
-    });
-
-    this.scene.add(potolok);
-  }
-
-  addCube() {
-    const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-
-    cube.position.set(1, 0.5, ROOM_HEIGHT / 2);
-
-    this.scene.add(cube);
   }
 
   onKeyPress = (event: any) => {
@@ -238,14 +135,6 @@ class Room extends Component<PageProps, AuthPageState> {
         break;
     }
 
-    // if (newX > STEP_SIZE && newX < ROOM_WIDTH - STEP_SIZE) {
-    //   this.cameraPosition.x = newX;
-    // }
-
-    // if (newZ > STEP_SIZE && newZ < ROOM_HEIGHT - STEP_SIZE) {
-    //   this.cameraPosition.z = newZ;
-    // }
-
     this.cameraPosition.x = newX;
     this.cameraPosition.z = newZ;
 
@@ -271,10 +160,11 @@ class Room extends Component<PageProps, AuthPageState> {
     gltfLoader.load(MODEL_URL, (gltf) => {
       const root = gltf.scene;
 
-      this.logObj(gltf.scene);
       this.filterObj(gltf.scene);
 
       this.scene.add(root);
+
+      this.setState({ loading: false });
 
       this.renderScene();
     });
@@ -317,9 +207,27 @@ class Room extends Component<PageProps, AuthPageState> {
   }
 
   render() {
+    const { loading } = this.state;
+
     return (
       <Page>
         <Canvas id="room-page-canvas" />
+        {loading && (
+          <Loader>
+            <div className="lds-roller">
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+
+            <Info>Загрузка файлов...</Info>
+          </Loader>
+        )}
       </Page>
     );
   }
@@ -333,6 +241,110 @@ const Page = styled.div`
 const Canvas = styled.canvas`
   width: 100vw;
   height: 100vh;
+`;
+
+const Loader = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+
+  .lds-roller {
+    display: inline-block;
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+  .lds-roller div {
+    animation: lds-roller 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    transform-origin: 40px 40px;
+  }
+  .lds-roller div:after {
+    content: ' ';
+    display: block;
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    margin: -4px 0 0 -4px;
+  }
+  .lds-roller div:nth-child(1) {
+    animation-delay: -0.036s;
+  }
+  .lds-roller div:nth-child(1):after {
+    top: 63px;
+    left: 63px;
+  }
+  .lds-roller div:nth-child(2) {
+    animation-delay: -0.072s;
+  }
+  .lds-roller div:nth-child(2):after {
+    top: 68px;
+    left: 56px;
+  }
+  .lds-roller div:nth-child(3) {
+    animation-delay: -0.108s;
+  }
+  .lds-roller div:nth-child(3):after {
+    top: 71px;
+    left: 48px;
+  }
+  .lds-roller div:nth-child(4) {
+    animation-delay: -0.144s;
+  }
+  .lds-roller div:nth-child(4):after {
+    top: 72px;
+    left: 40px;
+  }
+  .lds-roller div:nth-child(5) {
+    animation-delay: -0.18s;
+  }
+  .lds-roller div:nth-child(5):after {
+    top: 71px;
+    left: 32px;
+  }
+  .lds-roller div:nth-child(6) {
+    animation-delay: -0.216s;
+  }
+  .lds-roller div:nth-child(6):after {
+    top: 68px;
+    left: 24px;
+  }
+  .lds-roller div:nth-child(7) {
+    animation-delay: -0.252s;
+  }
+  .lds-roller div:nth-child(7):after {
+    top: 63px;
+    left: 17px;
+  }
+  .lds-roller div:nth-child(8) {
+    animation-delay: -0.288s;
+  }
+  .lds-roller div:nth-child(8):after {
+    top: 56px;
+    left: 12px;
+  }
+  @keyframes lds-roller {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const Info = styled.h5`
+  color: #fff;
+  font-family: --apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+    'Helvetica Neue', sans-serif;
 `;
 
 export default connect<StoreProps, StoreDispatchProps, any>(
