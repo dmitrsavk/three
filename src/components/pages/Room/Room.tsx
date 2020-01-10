@@ -4,18 +4,16 @@ import * as THREE from 'three';
 
 import { connect } from 'core';
 import { PageProps, StoreDispatchProps, StoreProps, AuthPageState } from './types';
-import { Scene, PerspectiveCamera, WebGLRenderer, Object3D, Mesh } from 'three';
-import { OBJLoader2 } from 'three/examples/jsm/loaders/OBJLoader2';
-import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
-import { MtlObjBridge } from 'three/examples/jsm/loaders/obj2/bridge/MtlObjBridge';
+import { Scene, PerspectiveCamera, WebGLRenderer, Object3D } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-const SCALE = 1;
-
-const STEP_SIZE = 0.2;
+const STEP_SIZE = 10;
 
 const ROOM_WIDTH = 3.5;
 const ROOM_HEIGHT = 5.25;
 const ROOM_TAIL = 2.3;
+
+const MODEL_URL = 'https://static.ihaveblog.ru/model/scene.gltf';
 
 class Room extends Component<PageProps, AuthPageState> {
   scene: Scene;
@@ -32,11 +30,15 @@ class Room extends Component<PageProps, AuthPageState> {
     y: 1.5,
     z: ROOM_HEIGHT - STEP_SIZE,
   };
-  mousePressed: boolean = false;
   scale: number = 1;
   angleX: number = 0;
   angleY: number = 0;
   room: Object3D;
+  mousePressed: boolean = false;
+
+  state = {
+    loading: true,
+  };
 
   constructor(props: PageProps) {
     super(props);
@@ -56,19 +58,7 @@ class Room extends Component<PageProps, AuthPageState> {
     //@ts-ignore
     this.canvas.addEventListener('mousemove', this.onMouseMove);
 
-    //this.addHelpers();
-    this.room = new THREE.Object3D();
-    //this.room.scale.set(SCALE, SCALE, SCALE);
-
-    this.scene.add(this.room);
-
-    this.addWalls();
-
-    this.addLight();
-
-    this.addSofa();
-
-    this.renderScene();
+    this.loadModel();
   }
 
   onMouseDown = (event: React.MouseEvent) => {
@@ -83,7 +73,7 @@ class Room extends Component<PageProps, AuthPageState> {
     if (this.mousePressed) {
       this.angleY += event.movementX / this.canvas.clientWidth;
       this.angleX += event.movementY / this.canvas.clientHeight;
-
+  
       this.camera.rotation.x = this.angleX / this.scale;
       this.camera.rotation.y = this.angleY / this.scale;
     }
@@ -133,79 +123,7 @@ class Room extends Component<PageProps, AuthPageState> {
     this.room.add(pointLight);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
-    this.room.add(ambientLight);
-  }
-
-  addWalls() {
-    const loader = new THREE.TextureLoader();
-    const tex = loader.load('https://static.ihaveblog.ru/texture.jpg');
-    const oboitex = loader.load('https://static.ihaveblog.ru/oboi.jpg');
-
-    const oboitex2 = loader.load('https://static.ihaveblog.ru/oboi.jpg');
-
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(8, 8);
-
-    oboitex.wrapS = THREE.RepeatWrapping;
-    oboitex.wrapT = THREE.RepeatWrapping;
-    oboitex.repeat.set(10, 7);
-
-    oboitex2.wrapS = THREE.RepeatWrapping;
-    oboitex2.wrapT = THREE.RepeatWrapping;
-    oboitex2.repeat.set(15, 7);
-
-    const polGeometry = new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
-    const polMaterial = new THREE.MeshPhongMaterial({ map: tex });
-
-    const pol = new THREE.Mesh(polGeometry, polMaterial);
-    pol.position.set(ROOM_WIDTH / 2, 0, ROOM_HEIGHT / 2);
-    pol.rotateX(-Math.PI / 2);
-
-    const walls = [
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex })
-      ),
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex2 })
-      ),
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_HEIGHT, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex2 })
-      ),
-      new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_TAIL, 100, 200),
-        new THREE.MeshPhongMaterial({ map: oboitex })
-      ),
-    ];
-
-    walls[0].position.set(ROOM_WIDTH / 2, ROOM_TAIL / 2, 0);
-
-    walls[1].rotateY(-Math.PI / 2);
-    walls[1].position.set(ROOM_WIDTH, ROOM_TAIL / 2, ROOM_HEIGHT / 2);
-
-    walls[2].rotateY(Math.PI / 2);
-    walls[2].position.set(0, ROOM_TAIL / 2, ROOM_HEIGHT / 2);
-
-    walls[3].position.set(ROOM_WIDTH / 2, ROOM_TAIL / 2, ROOM_HEIGHT);
-    walls[3].rotateY(Math.PI);
-
-    const potolokGeometry = new THREE.PlaneBufferGeometry(ROOM_WIDTH, ROOM_HEIGHT, 100, 200);
-    const potolokMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 1 });
-
-    const potolok = new THREE.Mesh(potolokGeometry, potolokMaterial);
-    potolok.position.set(ROOM_WIDTH / 2, ROOM_TAIL, ROOM_HEIGHT / 2);
-    potolok.rotateX(Math.PI / 2);
-
-    this.room.add(pol);
-
-    walls.forEach((wall) => {
-      this.room.add(wall);
-    });
-
-    this.room.add(potolok);
+    this.scene.add(ambientLight);
   }
 
   onKeyPress = (event: any) => {
@@ -234,19 +152,15 @@ class Room extends Component<PageProps, AuthPageState> {
         break;
     }
 
-    if (newX > STEP_SIZE && newX < ROOM_WIDTH - STEP_SIZE) {
-      this.cameraPosition.x = newX;
-    }
-
-    if (newZ > STEP_SIZE && newZ < ROOM_HEIGHT - STEP_SIZE) {
-      this.cameraPosition.z = newZ;
-    }
+    this.cameraPosition.x = newX;
+    this.cameraPosition.z = newZ;
 
     this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
   };
 
   needResize() {
     const pixelRatio = window.devicePixelRatio;
+    //const pixelRatio = 1;
     const width = this.canvas.clientWidth * pixelRatio;
     const height = this.canvas.clientHeight * pixelRatio;
 
@@ -255,6 +169,47 @@ class Room extends Component<PageProps, AuthPageState> {
     this.renderer.setSize(width, height, false);
 
     return needResize;
+  }
+
+  loadModel() {
+    const gltfLoader = new GLTFLoader();
+
+    gltfLoader.load(MODEL_URL, (gltf) => {
+      const root = gltf.scene;
+
+      this.filterObj(gltf.scene);
+
+      this.scene.add(root);
+
+      this.setState({ loading: false });
+
+      this.renderScene();
+    });
+  }
+
+  logObj(scene: THREE.Object3D) {
+    console.log(scene.name);
+
+    if (scene.children && scene.children.length) {
+      scene.children.forEach((child) => {
+        this.logObj(child);
+      });
+    }
+  }
+
+  filterObj(scene: THREE.Object3D) {
+    //couch_0
+    //couch_00_Material_#9477_0
+
+    if (scene.children && scene.children.length) {
+      scene.children.forEach((child, index) => {
+        if (child.name === 'couch_0' || child.name === 'couch_00_Material_#9477_0') {
+          scene.children[index] = new THREE.Object3D();
+        } else {
+          this.filterObj(child);
+        }
+      });
+    }
   }
 
   renderScene() {
@@ -268,29 +223,28 @@ class Room extends Component<PageProps, AuthPageState> {
     requestAnimationFrame(this.renderScene);
   }
 
-  addSofa() {
-    const mtlLoader = new MTLLoader();
-    const objLoader = new OBJLoader2();
-
-    mtlLoader.load('/static/models/sofa.mtl', (mtlParseResult) => {
-      const materials = MtlObjBridge.addMaterialsFromMtlLoader(mtlParseResult);
-
-      objLoader.addMaterials(materials, false);
-
-      objLoader.load('/static/models/sofa.obj', (root: Mesh) => {
-        root.position.set(ROOM_WIDTH / 2 + 1.1, 0, ROOM_HEIGHT / 2 - 1.3);
-        root.scale.set(0.0010, 0.0012, 0.0010);
-        root.rotateY(-Math.PI / 2);
-
-        this.room.add(root);
-      });
-    });
-  }
-
   render() {
+    const { loading } = this.state;
+
     return (
       <Page>
         <Canvas id="room-page-canvas" />
+        {loading && (
+          <Loader>
+            <div className="lds-roller">
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </div>
+
+            <Info>Загрузка файлов...</Info>
+          </Loader>
+        )}
       </Page>
     );
   }
@@ -304,6 +258,110 @@ const Page = styled.div`
 const Canvas = styled.canvas`
   width: 100vw;
   height: 100vh;
+`;
+
+const Loader = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+
+  .lds-roller {
+    display: inline-block;
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+  .lds-roller div {
+    animation: lds-roller 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    transform-origin: 40px 40px;
+  }
+  .lds-roller div:after {
+    content: ' ';
+    display: block;
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    margin: -4px 0 0 -4px;
+  }
+  .lds-roller div:nth-child(1) {
+    animation-delay: -0.036s;
+  }
+  .lds-roller div:nth-child(1):after {
+    top: 63px;
+    left: 63px;
+  }
+  .lds-roller div:nth-child(2) {
+    animation-delay: -0.072s;
+  }
+  .lds-roller div:nth-child(2):after {
+    top: 68px;
+    left: 56px;
+  }
+  .lds-roller div:nth-child(3) {
+    animation-delay: -0.108s;
+  }
+  .lds-roller div:nth-child(3):after {
+    top: 71px;
+    left: 48px;
+  }
+  .lds-roller div:nth-child(4) {
+    animation-delay: -0.144s;
+  }
+  .lds-roller div:nth-child(4):after {
+    top: 72px;
+    left: 40px;
+  }
+  .lds-roller div:nth-child(5) {
+    animation-delay: -0.18s;
+  }
+  .lds-roller div:nth-child(5):after {
+    top: 71px;
+    left: 32px;
+  }
+  .lds-roller div:nth-child(6) {
+    animation-delay: -0.216s;
+  }
+  .lds-roller div:nth-child(6):after {
+    top: 68px;
+    left: 24px;
+  }
+  .lds-roller div:nth-child(7) {
+    animation-delay: -0.252s;
+  }
+  .lds-roller div:nth-child(7):after {
+    top: 63px;
+    left: 17px;
+  }
+  .lds-roller div:nth-child(8) {
+    animation-delay: -0.288s;
+  }
+  .lds-roller div:nth-child(8):after {
+    top: 56px;
+    left: 12px;
+  }
+  @keyframes lds-roller {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const Info = styled.h5`
+  color: #fff;
+  font-family: --apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+    'Helvetica Neue', sans-serif;
 `;
 
 export default connect<StoreProps, StoreDispatchProps, any>(
