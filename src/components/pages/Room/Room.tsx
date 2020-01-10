@@ -7,7 +7,7 @@ import { PageProps, StoreDispatchProps, StoreProps, AuthPageState } from './type
 import { Scene, PerspectiveCamera, WebGLRenderer, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-const STEP_SIZE = 20;
+const STEP_SIZE = 10;
 
 const ROOM_WIDTH = 5;
 const ROOM_HEIGHT = 10;
@@ -57,7 +57,7 @@ class Room extends Component<PageProps, AuthPageState> {
     // this.addWalls();
     // this.addCube();
 
-    this.addLight();
+    //this.addLight();
 
     this.loadModel();
   }
@@ -253,8 +253,8 @@ class Room extends Component<PageProps, AuthPageState> {
   };
 
   needResize() {
-    // const pixelRatio = window.devicePixelRatio;
-    const pixelRatio = 1;
+    const pixelRatio = window.devicePixelRatio;
+    //const pixelRatio = 1;
     const width = this.canvas.clientWidth * pixelRatio;
     const height = this.canvas.clientHeight * pixelRatio;
 
