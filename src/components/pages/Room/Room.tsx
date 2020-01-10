@@ -5,12 +5,15 @@ import * as THREE from 'three';
 import { connect } from 'core';
 import { PageProps, StoreDispatchProps, StoreProps, AuthPageState } from './types';
 import { Scene, PerspectiveCamera, WebGLRenderer, Object3D } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-const STEP_SIZE = 0.2;
+const STEP_SIZE = 20;
 
 const ROOM_WIDTH = 5;
 const ROOM_HEIGHT = 10;
 const ROOM_TAIL = 2.5;
+
+const MODEL_URL = 'https://static.ihaveblog.ru/model/scene.gltf';
 
 class Room extends Component<PageProps, AuthPageState> {
   scene: Scene;
@@ -51,12 +54,12 @@ class Room extends Component<PageProps, AuthPageState> {
     this.canvas.addEventListener('mousemove', this.onMouseMove);
 
     //this.addHelpers();
-    this.addWalls();
-    this.addCube();
+    // this.addWalls();
+    // this.addCube();
 
     this.addLight();
 
-    this.renderScene();
+    this.loadModel();
   }
 
   onMouseDown = (event: React.MouseEvent) => {
@@ -235,19 +238,23 @@ class Room extends Component<PageProps, AuthPageState> {
         break;
     }
 
-    if (newX > STEP_SIZE && newX < ROOM_WIDTH - STEP_SIZE) {
-      this.cameraPosition.x = newX;
-    }
+    // if (newX > STEP_SIZE && newX < ROOM_WIDTH - STEP_SIZE) {
+    //   this.cameraPosition.x = newX;
+    // }
 
-    if (newZ > STEP_SIZE && newZ < ROOM_HEIGHT - STEP_SIZE) {
-      this.cameraPosition.z = newZ;
-    }
+    // if (newZ > STEP_SIZE && newZ < ROOM_HEIGHT - STEP_SIZE) {
+    //   this.cameraPosition.z = newZ;
+    // }
+
+    this.cameraPosition.x = newX;
+    this.cameraPosition.z = newZ;
 
     this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
   };
 
   needResize() {
-    const pixelRatio = window.devicePixelRatio;
+    // const pixelRatio = window.devicePixelRatio;
+    const pixelRatio = 1;
     const width = this.canvas.clientWidth * pixelRatio;
     const height = this.canvas.clientHeight * pixelRatio;
 
@@ -256,6 +263,18 @@ class Room extends Component<PageProps, AuthPageState> {
     this.renderer.setSize(width, height, false);
 
     return needResize;
+  }
+
+  loadModel() {
+    const gltfLoader = new GLTFLoader();
+
+    gltfLoader.load(MODEL_URL, (gltf) => {
+      const root = gltf.scene;
+
+      this.scene.add(root);
+
+      this.renderScene();
+    });
   }
 
   renderScene() {
