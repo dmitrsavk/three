@@ -3,41 +3,71 @@ import styled from 'styled-components';
 import * as THREE from 'three';
 
 import { connect } from 'core';
-import { PageProps, StoreDispatchProps, StoreProps, AuthPageState } from './types';
-import { Scene, PerspectiveCamera, WebGLRenderer, Object3D } from 'three';
+import { PageProps, StoreDispatchProps, StoreProps, PageState } from './types';
+import { Scene, PerspectiveCamera, WebGLRenderer, Object3D, Mesh } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 
-const STEP_SIZE = 10;
-
-const ROOM_WIDTH = 3.5;
-const ROOM_HEIGHT = 5.25;
-const ROOM_TAIL = 2.3;
 
 const MODEL_URL = 'https://static.ihaveblog.ru/model/scene.gltf';
 
-class Room extends Component<PageProps, AuthPageState> {
+const STEP_SIZE = 0.05;
+
+const BLACK_LIST: string[] = [
+  // 'window',
+  // 'stairs',
+  // 'couch',
+  // 'chair',
+  // 'Shelf',
+  // 'bed',
+  // 'lamp',
+  // 'switches',
+  // 'shopping',
+  // 'plates',
+];
+
+const needDelete = (item: any): boolean => {
+  if (item.geometry && item.geometry.index && item.geometry.index.array) {
+    // console.log(item.name, item.geometry.index.array.length);
+  }
+
+  if (item.name === '') {
+    return false;
+  }
+
+  for (let i = 0; i < BLACK_LIST.length; i++) {
+    if (item.name.includes(BLACK_LIST[i])) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+class Room extends Component<PageProps, PageState> {
   scene: Scene;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
   canvas: HTMLCanvasElement;
-  objects: Object3D[] = [];
   cameraPosition: {
     x: number;
     y: number;
     z: number;
   } = {
-    x: ROOM_WIDTH / 2,
-    y: 1.5,
-    z: ROOM_HEIGHT - STEP_SIZE,
+    x: 0,
+    y: 1.8,
+    z: 0,
   };
-  scale: number = 1;
-  angleX: number = 0;
-  angleY: number = 0;
-  room: Object3D;
-  mousePressed: boolean = false;
+  controls: any;
+  moveForward: boolean;
+  moveLeft: boolean;
+  moveBackward: boolean;
+  moveRight: boolean;
+  verts: number = 0;
 
   state = {
     loading: true,
+    onboarding: false,
   };
 
   constructor(props: PageProps) {
@@ -47,37 +77,14 @@ class Room extends Component<PageProps, AuthPageState> {
   }
 
   componentDidMount() {
-    document.addEventListener('keydown', this.onKeyPress);
-
     this.init3D();
 
-    //@ts-ignore
-    this.canvas.addEventListener('mousedown', this.onMouseDown);
-    //@ts-ignore
-    this.canvas.addEventListener('mouseup', this.onMouseUp);
-    //@ts-ignore
-    this.canvas.addEventListener('mousemove', this.onMouseMove);
-
     this.loadModel();
+    // this.addHelpers();
+
+    this.initControls();
+    // this.addLight();
   }
-
-  onMouseDown = (event: React.MouseEvent) => {
-    this.mousePressed = true;
-  };
-
-  onMouseUp = (event: React.MouseEvent) => {
-    this.mousePressed = false;
-  };
-
-  onMouseMove = (event: React.MouseEvent) => {
-    if (this.mousePressed) {
-      this.angleY += event.movementX / this.canvas.clientWidth;
-      this.angleX += event.movementY / this.canvas.clientHeight;
-  
-      this.camera.rotation.x = this.angleX / this.scale;
-      this.camera.rotation.y = this.angleY / this.scale;
-    }
-  };
 
   init3D() {
     this.canvas = document.getElementById('room-page-canvas') as HTMLCanvasElement;
@@ -86,12 +93,18 @@ class Room extends Component<PageProps, AuthPageState> {
     this.camera = new THREE.PerspectiveCamera(45, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 1000);
 
     this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
-    this.camera.lookAt(ROOM_WIDTH / 2, ROOM_TAIL / 3, 0)
 
     this.camera.rotation.order = 'YXZ';
 
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, alpha: true });
+
+    // @ts-ignore
+    document.addEventListener('keydown', this.onKeyDown);
+    // @ts-ignore
+    document.addEventListener('keyup', this.onKeyUp);
   }
+
+  addLight() {}
 
   addHelpers() {
     const grid = new THREE.GridHelper(100, 100);
@@ -107,60 +120,9 @@ class Room extends Component<PageProps, AuthPageState> {
     this.scene.add(axes);
   }
 
-  addLight() {
-    const directionLight = new THREE.DirectionalLight(0xffffff, 0.1);
-    this.scene.add(directionLight);
-
-    const adirectionLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    adirectionLight.position.set(ROOM_WIDTH / 2, 0, ROOM_HEIGHT / 2);
-    adirectionLight.target.position.set(ROOM_WIDTH / 2, ROOM_TAIL, ROOM_HEIGHT / 2);
-    this.room.add(adirectionLight);
-    this.room.add(adirectionLight.target);
-
-    const pointLight = new THREE.PointLight(0xffffff, 1);
-    pointLight.position.set(ROOM_WIDTH / 2, ROOM_TAIL - 0.5, ROOM_HEIGHT / 2);
-    pointLight.distance = 8;
-    this.room.add(pointLight);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
-    this.scene.add(ambientLight);
-  }
-
-  onKeyPress = (event: any) => {
-    const dx = STEP_SIZE * Math.cos(this.angleY);
-    const dz = STEP_SIZE * Math.sin(this.angleY);
-
-    let newX = this.cameraPosition.x;
-    let newZ = this.cameraPosition.z;
-
-    switch (event.keyCode) {
-      case 68:
-        newX = this.cameraPosition.x + dx;
-        newZ = this.cameraPosition.z - dz;
-        break;
-      case 65:
-        newX = this.cameraPosition.x - dx;
-        newZ = this.cameraPosition.z + dz;
-        break;
-      case 87:
-        newX = this.cameraPosition.x - dz;
-        newZ = this.cameraPosition.z - dx;
-        break;
-      case 83:
-        newX = this.cameraPosition.x + dz;
-        newZ = this.cameraPosition.z + dx;
-        break;
-    }
-
-    this.cameraPosition.x = newX;
-    this.cameraPosition.z = newZ;
-
-    this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
-  };
-
   needResize() {
     const pixelRatio = window.devicePixelRatio;
-    //const pixelRatio = 1;
+    // const pixelRatio = 1;
     const width = this.canvas.clientWidth * pixelRatio;
     const height = this.canvas.clientHeight * pixelRatio;
 
@@ -177,33 +139,43 @@ class Room extends Component<PageProps, AuthPageState> {
     gltfLoader.load(MODEL_URL, (gltf) => {
       const root = gltf.scene;
 
+      root.scale.set(0.01, 0.01, 0.01);
+      root.translateY(1.8);
+
       this.filterObj(gltf.scene);
 
       this.scene.add(root);
 
-      this.setState({ loading: false });
+      this.setState({ loading: false, onboarding: true });
 
       this.renderScene();
     });
   }
 
-  logObj(scene: THREE.Object3D) {
-    console.log(scene.name);
+  // @ts-ignore
+  logObj(obj, lines: string[] = [], isLast = true, prefix = '') {
+    const localPrefix = isLast ? '└─' : '├─';
+    lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);
+    const newPrefix = prefix + (isLast ? '  ' : '│ ');
+    const lastNdx = obj.children.length - 1;
 
-    if (scene.children && scene.children.length) {
-      scene.children.forEach((child) => {
-        this.logObj(child);
-      });
+    if (obj.geometry && obj.geometry.index && obj.geometry.index.array) {
+      this.verts += obj.geometry.index.array.length;
     }
+
+    // @ts-ignore
+    obj.children.forEach((child, ndx) => {
+      const isLast = ndx === lastNdx;
+      this.logObj(child, lines, isLast, newPrefix);
+    });
+
+    return lines;
   }
 
   filterObj(scene: THREE.Object3D) {
-    //couch_0
-    //couch_00_Material_#9477_0
-
     if (scene.children && scene.children.length) {
       scene.children.forEach((child, index) => {
-        if (child.name === 'couch_0' || child.name === 'couch_00_Material_#9477_0') {
+        if (needDelete(child)) {
           scene.children[index] = new THREE.Object3D();
         } else {
           this.filterObj(child);
@@ -212,6 +184,51 @@ class Room extends Component<PageProps, AuthPageState> {
     }
   }
 
+  onKeyDown = (event: React.KeyboardEvent<Document>) => {
+    switch (event.keyCode) {
+      case 38: // up
+      case 87: // w
+        this.moveForward = true;
+        break;
+      case 37: // left
+      case 65: // a
+        this.moveLeft = true;
+        break;
+      case 40: // down
+      case 83: // s
+        this.moveBackward = true;
+        break;
+      case 39: // right
+      case 68: // d
+        this.moveRight = true;
+        break;
+    }
+  };
+
+  onKeyUp = (event: React.KeyboardEvent<Document>) => {
+    switch (event.keyCode) {
+      case 38: // up
+      case 87: // w
+        this.moveForward = false;
+        break;
+
+      case 37: // left
+      case 65: // a
+        this.moveLeft = false;
+        break;
+
+      case 40: // down
+      case 83: // s
+        this.moveBackward = false;
+        break;
+
+      case 39: // right
+      case 68: // d
+        this.moveRight = false;
+        break;
+    }
+  };
+
   renderScene() {
     if (this.needResize()) {
       this.camera.aspect = this.canvas.clientWidth / this.canvas.clientHeight;
@@ -219,12 +236,55 @@ class Room extends Component<PageProps, AuthPageState> {
     }
 
     this.renderer.render(this.scene, this.camera);
+    this.updateCameraPosition();
 
     requestAnimationFrame(this.renderScene);
   }
 
+  onOnboardingClick = () => {
+    this.setState({ onboarding: false });
+
+    this.controls.lock();
+  };
+
+  initControls() {
+    this.controls = new PointerLockControls(this.camera, document.body);
+
+    this.scene.add(this.controls.getObject());
+
+    this.controls.addEventListener('lock', () => {
+      this.setState({ onboarding: false });
+    });
+
+    this.controls.addEventListener('unlock', () => {
+      this.setState({ onboarding: true });
+    });
+  }
+
+  updateCameraPosition() {
+    if (this.moveBackward) {
+      this.controls.moveForward(-STEP_SIZE);
+      // console.log(this.camera.position);
+    }
+
+    if (this.moveForward) {
+      this.controls.moveForward(STEP_SIZE);
+      // console.log(this.camera.position);
+    }
+
+    if (this.moveLeft) {
+      this.controls.moveRight(-STEP_SIZE);
+      // console.log(this.camera.position);
+    }
+
+    if (this.moveRight) {
+      this.controls.moveRight(STEP_SIZE);
+      // console.log(this.camera.position);
+    }
+  }
+
   render() {
-    const { loading } = this.state;
+    const { loading, onboarding } = this.state;
 
     return (
       <Page>
@@ -245,6 +305,12 @@ class Room extends Component<PageProps, AuthPageState> {
             <Info>Загрузка файлов...</Info>
           </Loader>
         )}
+        {onboarding && (
+          <Onboarding onClick={this.onOnboardingClick}>
+            <h3>Клик мышью для старта</h3>
+            <h4>Передвигаться: WASD</h4>
+          </Onboarding>
+        )}
       </Page>
     );
   }
@@ -258,6 +324,24 @@ const Page = styled.div`
 const Canvas = styled.canvas`
   width: 100vw;
   height: 100vh;
+  background: linear-gradient(135deg, rgb(246, 85, 153) 0%, rgb(77, 3, 22) 100%);
+  background-size: cover;
+  background-repeat: no-repeat;
+`;
+
+const Onboarding = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-family: --apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+    'Helvetica Neue', sans-serif;
 `;
 
 const Loader = styled.div`

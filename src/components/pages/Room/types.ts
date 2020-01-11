@@ -8,4 +8,7 @@ export type OwnProps = {};
 
 export type PageProps = StoreDispatchProps & StoreProps & OwnProps;
 
-export type AuthPageState = {};
+export type PageState = {
+  loading: boolean,
+  onboarding: boolean
+};

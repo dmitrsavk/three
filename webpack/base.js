@@ -29,7 +29,7 @@ module.exports = (env) => {
           loader: 'awesome-typescript-loader',
         },
         {
-          test: /\.(png|jp?g|gif|svg)$/,
+          test: /\.(png|jp?g|gif|svg|hdr)$/,
           use: [
             {
               loader: 'file-loader',
