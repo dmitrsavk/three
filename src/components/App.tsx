@@ -7,7 +7,7 @@ export class App extends React.Component<any, any> {
   render() {
     return (
       <Switch>
-        <Route exact path="/room" component={Room} />
+        <Route exact path="/" component={Room} />
         <Route exact path="/sun" component={Sun} />
       </Switch>
     );

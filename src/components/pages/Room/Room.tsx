@@ -57,7 +57,6 @@ class Room extends Component<PageProps, PageState> {
   }
 
   onHouseLoad = () => {
-    console.log(this);
     this.setState({ loading: false, onboarding: true });
 
     this.renderScene();
@@ -69,7 +68,7 @@ class Room extends Component<PageProps, PageState> {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(45, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 100);
 
-    this.camera.position.set(0, 1.8, 0);
+    this.camera.position.set(0, 2, 0);
 
     this.camera.rotation.order = 'YXZ';
 
