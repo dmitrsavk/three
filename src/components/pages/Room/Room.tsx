@@ -4,12 +4,11 @@ import * as THREE from 'three';
 
 import { connect } from 'core';
 import { PageProps, StoreDispatchProps, StoreProps, PageState } from './types';
-import { Scene, PerspectiveCamera, WebGLRenderer, Object3D, Mesh } from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { Scene, PerspectiveCamera, WebGLRenderer } from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
-
-
-const MODEL_URL = 'https://static.ihaveblog.ru/model/scene.gltf';
+import Light from './components/Light';
+import House from './components/House';
+import Helpers from './components/Helpers';
 
 const STEP_SIZE = 0.05;
 
@@ -26,48 +25,21 @@ const BLACK_LIST: string[] = [
   // 'plates',
 ];
 
-const needDelete = (item: any): boolean => {
-  if (item.geometry && item.geometry.index && item.geometry.index.array) {
-    // console.log(item.name, item.geometry.index.array.length);
-  }
-
-  if (item.name === '') {
-    return false;
-  }
-
-  for (let i = 0; i < BLACK_LIST.length; i++) {
-    if (item.name.includes(BLACK_LIST[i])) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
 class Room extends Component<PageProps, PageState> {
   scene: Scene;
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
   canvas: HTMLCanvasElement;
-  cameraPosition: {
-    x: number;
-    y: number;
-    z: number;
-  } = {
-    x: 0,
-    y: 1.8,
-    z: 0,
-  };
   controls: any;
   moveForward: boolean;
   moveLeft: boolean;
   moveBackward: boolean;
   moveRight: boolean;
-  verts: number = 0;
 
-  state = {
+  state: PageState = {
     loading: true,
     onboarding: false,
+    init: false,
   };
 
   constructor(props: PageProps) {
@@ -79,20 +51,25 @@ class Room extends Component<PageProps, PageState> {
   componentDidMount() {
     this.init3D();
 
-    this.loadModel();
-    // this.addHelpers();
-
     this.initControls();
-    // this.addLight();
+
+    this.setState({ init: true });
+  }
+
+  onHouseLoad = () => {
+    console.log(this);
+    this.setState({ loading: false, onboarding: true });
+
+    this.renderScene();
   }
 
   init3D() {
     this.canvas = document.getElementById('room-page-canvas') as HTMLCanvasElement;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(45, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(45, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 100);
 
-    this.camera.position.set(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z);
+    this.camera.position.set(0, 1.8, 0);
 
     this.camera.rotation.order = 'YXZ';
 
@@ -102,22 +79,6 @@ class Room extends Component<PageProps, PageState> {
     document.addEventListener('keydown', this.onKeyDown);
     // @ts-ignore
     document.addEventListener('keyup', this.onKeyUp);
-  }
-
-  addLight() {}
-
-  addHelpers() {
-    const grid = new THREE.GridHelper(100, 100);
-    const axes = new THREE.AxesHelper(6);
-
-    axes.renderOrder = 1;
-    //@ts-ignore
-    axes.material.depthTest = false;
-
-    grid.renderOrder = 1;
-
-    this.scene.add(grid);
-    this.scene.add(axes);
   }
 
   needResize() {
@@ -131,57 +92,6 @@ class Room extends Component<PageProps, PageState> {
     this.renderer.setSize(width, height, false);
 
     return needResize;
-  }
-
-  loadModel() {
-    const gltfLoader = new GLTFLoader();
-
-    gltfLoader.load(MODEL_URL, (gltf) => {
-      const root = gltf.scene;
-
-      root.scale.set(0.01, 0.01, 0.01);
-      root.translateY(1.8);
-
-      this.filterObj(gltf.scene);
-
-      this.scene.add(root);
-
-      this.setState({ loading: false, onboarding: true });
-
-      this.renderScene();
-    });
-  }
-
-  // @ts-ignore
-  logObj(obj, lines: string[] = [], isLast = true, prefix = '') {
-    const localPrefix = isLast ? '└─' : '├─';
-    lines.push(`${prefix}${prefix ? localPrefix : ''}${obj.name || '*no-name*'} [${obj.type}]`);
-    const newPrefix = prefix + (isLast ? '  ' : '│ ');
-    const lastNdx = obj.children.length - 1;
-
-    if (obj.geometry && obj.geometry.index && obj.geometry.index.array) {
-      this.verts += obj.geometry.index.array.length;
-    }
-
-    // @ts-ignore
-    obj.children.forEach((child, ndx) => {
-      const isLast = ndx === lastNdx;
-      this.logObj(child, lines, isLast, newPrefix);
-    });
-
-    return lines;
-  }
-
-  filterObj(scene: THREE.Object3D) {
-    if (scene.children && scene.children.length) {
-      scene.children.forEach((child, index) => {
-        if (needDelete(child)) {
-          scene.children[index] = new THREE.Object3D();
-        } else {
-          this.filterObj(child);
-        }
-      });
-    }
   }
 
   onKeyDown = (event: React.KeyboardEvent<Document>) => {
@@ -235,8 +145,9 @@ class Room extends Component<PageProps, PageState> {
       this.camera.updateProjectionMatrix();
     }
 
-    this.renderer.render(this.scene, this.camera);
     this.updateCameraPosition();
+
+    this.renderer.render(this.scene, this.camera);
 
     requestAnimationFrame(this.renderScene);
   }
@@ -264,31 +175,36 @@ class Room extends Component<PageProps, PageState> {
   updateCameraPosition() {
     if (this.moveBackward) {
       this.controls.moveForward(-STEP_SIZE);
-      // console.log(this.camera.position);
     }
 
     if (this.moveForward) {
       this.controls.moveForward(STEP_SIZE);
-      // console.log(this.camera.position);
     }
 
     if (this.moveLeft) {
       this.controls.moveRight(-STEP_SIZE);
-      // console.log(this.camera.position);
     }
 
     if (this.moveRight) {
       this.controls.moveRight(STEP_SIZE);
-      // console.log(this.camera.position);
     }
   }
 
   render() {
-    const { loading, onboarding } = this.state;
+    const { loading, onboarding, init } = this.state;
 
     return (
       <Page>
-        <Canvas id="room-page-canvas" />
+        <Canvas id="room-page-canvas" pLoading={loading} />
+
+        {init && (
+          <>
+            <Light scene={this.scene} />
+            <House scene={this.scene} onLoad={this.onHouseLoad} />
+            <Helpers scene={this.scene} />
+          </>
+        )}
+
         {loading && (
           <Loader>
             <div className="lds-roller">
@@ -305,6 +221,7 @@ class Room extends Component<PageProps, PageState> {
             <Info>Загрузка файлов...</Info>
           </Loader>
         )}
+
         {onboarding && (
           <Onboarding onClick={this.onOnboardingClick}>
             <h3>Клик мышью для старта</h3>
@@ -321,10 +238,10 @@ const Page = styled.div`
   display: flex;
 `;
 
-const Canvas = styled.canvas`
+const Canvas = styled.canvas<{ pLoading: boolean }>`
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(135deg, rgb(246, 85, 153) 0%, rgb(77, 3, 22) 100%);
+  background: ${(p) => (p.pLoading ? '#000' : 'linear-gradient(135deg, rgb(246, 85, 153) 0%, rgb(77, 3, 22) 100%)')};
   background-size: cover;
   background-repeat: no-repeat;
 `;

@@ -9,6 +9,7 @@ export type OwnProps = {};
 export type PageProps = StoreDispatchProps & StoreProps & OwnProps;
 
 export type PageState = {
-  loading: boolean,
-  onboarding: boolean
+  loading: boolean;
+  onboarding: boolean;
+  init: boolean;
 };
